@@ -1,0 +1,47 @@
+---
+title: "The Infer Package and Bayes Factors"
+output: html_notebook
+author: "Jon Minton"
+---
+
+# Introduction 
+
+This document will introduce a couple of concepts, and one R package, for performing statistical inference tests in R.
+
+1. The There-is-only-one-test framework, and the R package infer
+2. Bayes Factors, as distinct from Neyman-Pearson Hypothesis Testing frameoworks
+
+# Proposed structure
+
+* TIOOT/Infer
+    * There-is-only-one-test : background
+        * Null & Alternative Hypothesis
+        * Disproving the Null
+            * One-sided and two-sided tests
+            * Spiegelhalter Definition
+                * > P-values are a measure of conflict between data and a hypothesis, and are certainly not direct expressions of a probability of hypotheses.
+                     * [Communicating Uncertainty about facts, numbers, and science](https://royalsocietypublishing.org/doi/pdf/10.1098/rsos.181870)
+    * [Infer package](https://github.com/tidymodels/infer)
+        * DataCamp courses
+            * [Foundations of Inference](https://www.datacamp.com/courses/foundations-of-inference)
+            * [Inference for Linear Regression](https://www.datacamp.com/courses/inference-for-linear-regression)
+            * [Inference for Numeric Data](https://www.datacamp.com/courses/inference-for-numerical-data)
+            * [Inference for Categorical Data](https://www.datacamp.com/courses/inference-for-categorical-data)
+    * Infer package workflow & Verbs
+        * Key Figure
+        * Description of verbs 
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
