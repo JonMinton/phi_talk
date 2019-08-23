@@ -58,6 +58,7 @@ This document will introduce a couple of concepts, and one R package, for perfor
         * [Inference for Linear Regression](https://www.datacamp.com/courses/inference-for-linear-regression)
         * [Inference for Numeric Data](https://www.datacamp.com/courses/inference-for-numerical-data)
         * [Inference for Categorical Data](https://www.datacamp.com/courses/inference-for-categorical-data)
+    * [Avoiding Datacamp](https://bookdown.org/cteplovs/ismaykim/ismaykim.pdf)
 
 # Examples of infer
 
@@ -122,16 +123,58 @@ null_rq1 %>%
 null_rq1 %>% 
   summarise(p_val = mean(stat > obs_diff_rq1))
 
+# To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
+# Is the above value either greater than 0.975, or less than 0.025? 
+
+
 
 # Second research question: 
  # Do manual transmission vehicles (from the 1970s) have higher MPG?
  # Alternative: They do
  # Null: They don't
 
+# Observed difference in means
+obs_diff_rq2 <- 
+  mtcars %>% 
+    group_by(am) %>% 
+    summarise(mean_mpg = mean(mpg)) %>% 
+    summarise(diff_in_means = diff(mean_mpg)) %>% 
+    pull(diff_in_means)
+
+obs_diff_rq2
+
+null_rq2 <- 
+  mtcars %>%
+    specify(response = mpg, explanatory = am) %>%
+    hypothesize(null = "independence") %>% 
+    generate(reps = 1000, type = "permute") %>%
+    calculate(stat = "diff in means", order = c("1", "0")) 
+
+# Visualise
+
+null_rq2 %>% 
+  ggplot(aes(x = stat)) + 
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = 0) + 
+  geom_vline(xintercept = obs_diff_rq2, colour = "red", size = 2)
+
+# P-value (one-sided)
+
+null_rq2 %>% 
+  summarise(p_val = mean(stat > obs_diff_rq2))
+
+# To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
+# Is the above value either greater than 0.975, or less than 0.025? 
+
+# RQ2 using the t-distribution 
+
 mtcars %>%
   specify(response = mpg, explanatory = am) %>%
-  generate(reps = 1000, type = "bootstrap") %>% # Resampling data with replacement
-  calculate(stat = "diff in means", order = c("1", "0"))
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "t", order = c("1", "0")) %>% 
+  visualize(method = "both", obs_stat_color = "red", obs_stat = 1.96)
+
 
 ```
 
