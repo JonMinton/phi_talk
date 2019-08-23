@@ -33,6 +33,19 @@ This document will introduce a couple of concepts, and one R package, for perfor
                 * Typical $\alpha$ values: 0.05, 0.01
                     * CERN: 'Five Sigma' (almost zero)
                 * [The Sizeless Stare](https://www.amazon.co.uk/Cult-Statistical-Significance-Economics-Cognition/dp/0472050079)
+            * Permutation approaches
+                * A generic, computationally intensive, approach to producing a distribution of expected effect sizes under the Null
+                * Key intuition:
+                    * $H_A$ says $X$ predicts/causes $Y$
+                    * Put another way:  Values of $X$ are *informative* as to values of $Y$
+                    * Say $X$ is categorical, and can either be $A$ or $B$
+                    * The data $D$ is a series of values of $Y$, with *labels* attached: the corresponding values of $X$
+                    * Another way of expressing $H_A$ and $H_0$:
+                        * $H_A$: These labels *matter* (Are informative of $Y$)
+                        * $H_0$: These labels *don't matter* (Are not informative of $Y$)
+                    * A corollary of $H_0$: If the labels don't matter, there's no harm (information lost) by reallocating them to $Y$ values at random
+                    * Random reallocation: Permutation
+                    * Repeat many times to estimate the Null distribution 
     * [Infer package](https://github.com/tidymodels/infer)
         * ![Key Figure](https://raw.githubusercontent.com/tidymodels/infer/master/figs/ht-diagram.png)
         * Verbs
@@ -78,7 +91,7 @@ mtcars <- as.data.frame(mtcars) %>%
  # Alternative: It does
 
 # Observed difference in proportions 
-obs_diff <- 
+obs_diff_rq1 <- 
   mtcars %>% 
     select(am, vs) %>% 
     group_by(vs) %>% 
@@ -86,21 +99,38 @@ obs_diff <-
     summarise(diff_in_props = diff(prop)) %>% 
     pull(diff_in_props)
 
-obs_diff
+obs_diff_rq1
 
+# Null distribution: 
+null_rq1 <- 
+  mtcars %>%
+    specify(am ~ vs, success = "1") %>%
+    hypothesize(null = "independence") %>%
+    generate(reps = 1000, type = "permute") %>%
+    calculate(stat = "diff in props", order = c("1", "0"))
 
-mtcars %>%
-  specify(am ~ vs, success = "1") %>%
-  hypothesize(null = "independence") %>%
-  generate(reps = 100, type = "permute") %>%
-  calculate(stat = "diff in props", order = c("1", "0"))
+# Visualise the Null
+
+null_rq1 %>% 
+  ggplot(aes(x = stat)) + 
+  geom_histogram() + 
+  geom_vline(xintercept = 0) + 
+  geom_vline(xintercept = obs_diff_rq1, colour = "red", size = 2)
+
+# P-value (two sided)
+
+null_rq1 %>% 
+  summarise(p_val = mean(stat > obs_diff_rq1))
+
 
 # Second research question: 
- # Does 
+ # Do manual transmission vehicles (from the 1970s) have higher MPG?
+ # Alternative: They do
+ # Null: They don't
 
 mtcars %>%
   specify(response = mpg, explanatory = am) %>%
-  generate(reps = 100, type = "bootstrap") %>%
+  generate(reps = 1000, type = "bootstrap") %>% # Resampling data with replacement
   calculate(stat = "diff in means", order = c("1", "0"))
 
 ```
