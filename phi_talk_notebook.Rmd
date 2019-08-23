@@ -15,21 +15,95 @@ This document will introduce a couple of concepts, and one R package, for perfor
 
 * TIOOT/Infer
     * There-is-only-one-test : background
+        * Allen Downey - a computer scientist's take on statistical inference
+            * 2011 - [There is only one test](http://allendowney.blogspot.com/2011/05/there-is-only-one-test.html)
+            * 2016 - [There is still only one test](http://allendowney.blogspot.com/2016/06/there-is-still-only-one-test.html)
+            * ![Key Figure](figures/dcq7d5hs_237c9bcfngs_b.png)
         * Null & Alternative Hypothesis
-        * Disproving the Null
-            * One-sided and two-sided tests
-            * Spiegelhalter Definition
-                * > P-values are a measure of conflict between data and a hypothesis, and are certainly not direct expressions of a probability of hypotheses.
-                     * [Communicating Uncertainty about facts, numbers, and science](https://royalsocietypublishing.org/doi/pdf/10.1098/rsos.181870)
+            * Null $H_0$: The (boring) world in which the proposed relationship between predictor and response variables is *false*
+            * Alternative $H_A$: The (interesting) world in which the proposed relationship between predictor and response is *true*
+        * P-values 
+            * > P-values are a measure of conflict between data and a hypothesis, and are certainly not direct expressions of a probability of hypotheses.
+                * [Communicating Uncertainty about facts, numbers, and science](https://royalsocietypublishing.org/doi/pdf/10.1098/rsos.181870)
+            * P-values are usually *indirect* strategies for investigating support for $H_A$, through quantifying *magnitude* and *direction* of conflict between data and $H_0$
+                * *Direction of conflict*: One-tailed cf two-tailed tests
+                * *Magnitude of conflict*: Probability of observing values of effect $\delta^{*}$ as or more extreme under $H_0$.
+            * Neyman-Pearson Approach
+                * Also prespecify $\alpha$: The magnitude of conflict between data and Null hypothesis, in expected direction, required to 'reject the Null'
+                * Typical $\alpha$ values: 0.05, 0.01
+                    * CERN: 'Five Sigma' (almost zero)
+                * [The Sizeless Stare](https://www.amazon.co.uk/Cult-Statistical-Significance-Economics-Cognition/dp/0472050079)
     * [Infer package](https://github.com/tidymodels/infer)
-        * DataCamp courses
-            * [Foundations of Inference](https://www.datacamp.com/courses/foundations-of-inference)
-            * [Inference for Linear Regression](https://www.datacamp.com/courses/inference-for-linear-regression)
-            * [Inference for Numeric Data](https://www.datacamp.com/courses/inference-for-numerical-data)
-            * [Inference for Categorical Data](https://www.datacamp.com/courses/inference-for-categorical-data)
-    * Infer package workflow & Verbs
-        * Key Figure
-        * Description of verbs 
+        * ![Key Figure](https://raw.githubusercontent.com/tidymodels/infer/master/figs/ht-diagram.png)
+        * Verbs
+            * `specify`
+            * `hypothesize`
+            * `generate`
+            * `calculate`
+    * DataCamp courses [(Learner beware)](https://www.buzzfeednews.com/article/daveyalba/datacamp-sexual-harassment-metoo-tech-startup)
+        * [Foundations of Inference](https://www.datacamp.com/courses/foundations-of-inference)
+        * [Inference for Linear Regression](https://www.datacamp.com/courses/inference-for-linear-regression)
+        * [Inference for Numeric Data](https://www.datacamp.com/courses/inference-for-numerical-data)
+        * [Inference for Categorical Data](https://www.datacamp.com/courses/inference-for-categorical-data)
+
+# Examples of infer
+
+```{r}
+pacman::p_load(tidyverse, infer)
+
+```
+
+# Initial example: mtcars
+
+* [mtcars dataset](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html)
+
+## Variables of interest
+
+* **vs**: Engine (0 - V-shaped; 1 = straight)
+* **am**: Transmission (0 = automatic, 1 = manual)
+* **mpg**: Miles per gallon
+
+```{r}
+mtcars <- as.data.frame(mtcars) %>%
+  mutate(cyl = factor(cyl),
+          vs = factor(vs),
+          am = factor(am),
+          gear = factor(gear),
+          carb = factor(carb))
+
+
+# First Research Question: 
+ # Does engine type influence(!) Transmission Type
+ # Null: It does not 
+ # Alternative: It does
+
+# Observed difference in proportions 
+obs_diff <- 
+  mtcars %>% 
+    select(am, vs) %>% 
+    group_by(vs) %>% 
+    summarise(prop = mean(am == 1)) %>% 
+    summarise(diff_in_props = diff(prop)) %>% 
+    pull(diff_in_props)
+
+obs_diff
+
+
+mtcars %>%
+  specify(am ~ vs, success = "1") %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 100, type = "permute") %>%
+  calculate(stat = "diff in props", order = c("1", "0"))
+
+# Second research question: 
+ # Does 
+
+mtcars %>%
+  specify(response = mpg, explanatory = am) %>%
+  generate(reps = 100, type = "bootstrap") %>%
+  calculate(stat = "diff in means", order = c("1", "0"))
+
+```
 
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
