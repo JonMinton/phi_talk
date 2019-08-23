@@ -1,7 +1,9 @@
 ---
 title: "The Infer Package and Bayes Factors"
-output: html_notebook
 author: "Jon Minton"
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Introduction 
@@ -77,6 +79,7 @@ pacman::p_load(tidyverse, infer)
 * **am**: Transmission (0 = automatic, 1 = manual)
 * **mpg**: Miles per gallon
 
+## Prep the data 
 ```{r}
 mtcars <- as.data.frame(mtcars) %>%
   mutate(cyl = factor(cyl),
@@ -84,13 +87,15 @@ mtcars <- as.data.frame(mtcars) %>%
           am = factor(am),
           gear = factor(gear),
           carb = factor(carb))
+```
 
+## First research question
 
-# First Research Question: 
- # Does engine type influence(!) Transmission Type
- # Null: It does not 
- # Alternative: It does
+* Does engine type influence(!) Transmission Type
+* Null: It does not 
+* Alternative: It does
 
+```{r}
 # Observed difference in proportions 
 obs_diff_rq1 <- 
   mtcars %>% 
@@ -102,6 +107,9 @@ obs_diff_rq1 <-
 
 obs_diff_rq1
 
+```
+
+```{r}
 # Null distribution: 
 null_rq1 <- 
   mtcars %>%
@@ -109,7 +117,9 @@ null_rq1 <-
     hypothesize(null = "independence") %>%
     generate(reps = 1000, type = "permute") %>%
     calculate(stat = "diff in props", order = c("1", "0"))
+```
 
+```{r}
 # Visualise the Null
 
 null_rq1 %>% 
@@ -117,22 +127,26 @@ null_rq1 %>%
   geom_histogram() + 
   geom_vline(xintercept = 0) + 
   geom_vline(xintercept = obs_diff_rq1, colour = "red", size = 2)
+```
 
+```{r}
 # P-value (two sided)
 
 null_rq1 %>% 
   summarise(p_val = mean(stat > obs_diff_rq1))
+```
 
-# To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
-# Is the above value either greater than 0.975, or less than 0.025? 
+To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
+> Is the above value either greater than 0.975, or less than 0.025? 
 
+## Second research question
 
+> Do manual transmission vehicles (from the 1970s) have higher MPG?
 
-# Second research question: 
- # Do manual transmission vehicles (from the 1970s) have higher MPG?
- # Alternative: They do
- # Null: They don't
+* Alternative: They do
+* Null: They don't
 
+```{r}
 # Observed difference in means
 obs_diff_rq2 <- 
   mtcars %>% 
@@ -142,14 +156,18 @@ obs_diff_rq2 <-
     pull(diff_in_means)
 
 obs_diff_rq2
+```
 
+```{r}
 null_rq2 <- 
   mtcars %>%
     specify(response = mpg, explanatory = am) %>%
     hypothesize(null = "independence") %>% 
     generate(reps = 1000, type = "permute") %>%
     calculate(stat = "diff in means", order = c("1", "0")) 
+```
 
+```{r}
 # Visualise
 
 null_rq2 %>% 
@@ -157,38 +175,206 @@ null_rq2 %>%
   geom_histogram(bins = 100) +
   geom_vline(xintercept = 0) + 
   geom_vline(xintercept = obs_diff_rq2, colour = "red", size = 2)
+```
 
+```{r}
 # P-value (one-sided)
 
 null_rq2 %>% 
   summarise(p_val = mean(stat > obs_diff_rq2))
+```
 
-# To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
-# Is the above value either greater than 0.975, or less than 0.025? 
 
+To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
+
+> Is the above value either greater than 0.975, or less than 0.025? 
+
+```{r}
 # RQ2 using the t-distribution 
+
+obs_diff_rq2_t <- 
+  mtcars %>% 
+  t_test(mpg ~ am, order = c("1", "0"), alternative = "less")
 
 mtcars %>%
   specify(response = mpg, explanatory = am) %>%
   hypothesize(null = "independence") %>% 
   generate(reps = 1000, type = "permute") %>%
   calculate(stat = "t", order = c("1", "0")) %>% 
-  visualize(method = "both", obs_stat_color = "red", obs_stat = 1.96)
+  visualize(method = "both") + 
+  shade_p_value(obs_stat = obs_diff_rq2_t, direction = "greater") +
+  geom_vline(xintercept = 1.96, colour = "darkgreen", size = 1.5, linetype = "dashed")
 
 
 ```
 
+# Second Example (If we get time)
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+> RQ: Are males taller than females (on average)
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+* $H_0$: No!
+* $H_A$: Yes!
+
+## Load and standardise data
 
 ```{r}
-plot(cars)
+pacman::p_load(readxl)
+
+height_data <- read_excel("data/height_data.xlsx")
+
+tidy_height <- 
+  height_data %>% 
+  mutate(height = ifelse(
+    is.na(metres), 
+    0.3048 * (feet + 0.0833333 * inches),
+    metres)
+  ) %>% 
+  select(gender, height)
+
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+## Hypothesis test
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r, eval = FALSE}
+obs_mean_diff <- 
+  tidy_height %>% 
+    group_by(gender) %>% 
+    summarise(mean_height = mean(height)) %>% 
+    summarise(mean_diff = mean_height[gender == "M"] - mean_height[gender == "F"]) %>% 
+    pull(mean_diff)
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+tidy_height %>% 
+  specify(height ~ gender) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("M", "F")) %>% 
+  visualize() %>% 
+  shade_p_value(
+    obs_stat = obs_mean_diff,
+    direction = "greater"
+  )
+
+```
+
+# Bayes Factors 
+
+* Analogy: Courts and Burden of Proof
+    * Criminal Courts: 'Beyond Reasonable Doubt' (Neyman-Pearson/Classical approach)
+    * Civil Courts: 'Balance of Probabilities' (The Bayes Factor: Likelihood Ratio)
+* Likelihood and Probability
+    * > The likelihood of the model given the data is proportional to the probability of the data given the model
+    * Likelihood is always relative rather than absolute
+        * A model is never *likely*, just *more/less likely* than another model
+* Bayes Factors
+    * $B(H_A, H_0) = \frac{p(D | H_A)}{p(D | H_0)}$
+    * B > 1 : More support for Alternative Hypothesis
+    * B < 1 : More support for Null Hypothesis
+    * How much more support?
+        * < 3: 'anecdotal'
+        * < 10: 'moderate'
+        * < 30: 'strong'
+        * etc
+
+## Example using mtcars dataset 
+
+> Given some value of MPG, what's the relative likelihood the car is manual (Alt) or automatic (Null) transmission?
+
+```{r}
+summaries <- 
+  mtcars %>% 
+    group_by(am) %>% 
+    summarise(
+      mean_mpg = mean(mpg), 
+      sd_mpg   = sd(mpg)
+    )
+
+mu_manual    <- summaries %>% filter(am == 1) %>% pull(mean_mpg)
+sd_manual    <- summaries %>% filter(am == 1) %>% pull(sd_mpg  )
+mu_automatic <- summaries %>% filter(am == 0) %>% pull(mean_mpg)
+sd_automatic <- summaries %>% filter(am == 0) %>% pull(sd_mpg  )
+
+
+```
+
+Bayes factor (Manual cf automatic) given MPG
+
+```{r}
+calc_bayes_factor <- function(value, mu_null, sd_null, mu_alt, sd_alt){
+  dnorm(value, mean = mu_alt, sd = sd_alt) / dnorm(value, mean = mu_null, sd = sd_alt)
+}
+
+```
+
+
+```{r}
+bf_schedule <- 
+  tibble(
+    mpg_vals = seq(0, 50, by = 0.01)
+  )  %>% 
+    mutate(bf = map_dbl(mpg_vals, calc_bayes_factor, mu_null = mu_automatic, sd_null = sd_automatic, mu_alt = mu_manual, sd_alt = sd_manual )
+    ) 
+
+bf_schedule %>% 
+  ggplot(aes(x = mpg_vals, y = bf)) + 
+  geom_line() + 
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
+
+
+```
+
+
+## Example using our heights data
+
+```{r}
+summaries <- 
+  tidy_height %>% 
+      group_by(gender) %>% 
+      summarise(
+        mean_height = mean(height),
+        sd_height = sd(height)
+      ) 
+
+mu_male      <- summaries %>% filter(gender == "M") %>% pull(mean_height)
+sd_male      <- summaries %>% filter(gender == "M") %>% pull(sd_height  )
+mu_female    <- summaries %>% filter(gender == "F") %>% pull(mean_height)
+sd_female    <- summaries %>% filter(gender == "F") %>% pull(sd_height  )
+
+
+```
+
+
+```{r}
+bf_schedule <- 
+  tibble(
+    height_vals = seq(0, 2.5, by = 0.01)
+  )  %>% 
+    mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
+    ) 
+
+bf_schedule %>% 
+  ggplot(aes(x = height_vals, y = bf)) + 
+  geom_line() + 
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
+
+
+```
+
+Finally, what's the relative likelihood that I'm male?
+
+```{r}
+my_height <- 1.7145
+
+calc_bayes_factor(value = my_height, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
+
+```
+
+
+#Conclusion/Discussion
+
+* There-is-only-one-test makes it easy to think through hypothesis testing
+* The `infer` package makes it straightforward to apply this approach 
+* Computationally intensive and analytic approaches do the same thing in different ways
+* Classical (Neyman-Pearson style) hypothesis tests may not answer the question you want to ask
+* Bayes Factors are an alterantive and often more pragmatic way of weighing the evidence
