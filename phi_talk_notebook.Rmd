@@ -221,6 +221,8 @@ mtcars %>%
 * Provenance unknown...
 * Unit appears to be inches 
 
+The dataset has many observations (though they may be synthetic), and so I'm going to create a variant with far fewer observations too
+
 ## Load and standardise data
 
 ```{r}
@@ -233,9 +235,20 @@ tidy_height <-
   height_data %>% 
     select(gender = Gender, height = Height) 
 
+set.seed(20) 
+tiny_tidy_height <- 
+  tidy_height %>% 
+  sample_n(size = 40, replace = FALSE)
+
 tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
   geom_density(alpha = 0.4)
+
+tiny_tidy_height %>% 
+  ggplot(aes(x = height, group = gender, fill = gender)) + 
+  geom_density(alpha = 0.4)
+
+
 ```
 
 ## Hypothesis test
@@ -250,6 +263,16 @@ obs_mean_diff <-
 
 obs_mean_diff
 
+tiny_obs_mean_diff <- 
+  tiny_tidy_height %>% 
+    group_by(gender) %>% 
+    summarise(mean_height = mean(height)) %>% 
+    summarise(mean_diff = mean_height[gender == "Male"] - mean_height[gender == "Female"]) %>% 
+    pull(mean_diff)
+
+tiny_obs_mean_diff
+
+
 tidy_height %>% 
   specify(height ~ gender) %>%
   hypothesize(null = "independence") %>% 
@@ -261,7 +284,17 @@ tidy_height %>%
   #   direction = "greater"
   # )
 
+tiny_tidy_height %>% 
+  specify(height ~ gender) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
+  visualize() 
 ```
+
+
+The range of Null differences is far outside the observed difference, and so the probability there's no true difference given this dataset is effectively zero. 
+
 
 # Bayes Factors 
 
@@ -347,6 +380,20 @@ sd_male      <- summaries %>% filter(gender == "Male") %>% pull(sd_height  )
 mu_female    <- summaries %>% filter(gender == "Female") %>% pull(mean_height)
 sd_female    <- summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
+tiny_summaries <- 
+  tiny_tidy_height %>% 
+      group_by(gender) %>% 
+      summarise(
+        mean_height = mean(height),
+        sd_height = sd(height)
+      ) 
+
+mu_male_tiny      <- tiny_summaries %>% filter(gender == "Male") %>% pull(mean_height)
+sd_male_tiny      <- tiny_summaries %>% filter(gender == "Male") %>% pull(sd_height  )
+mu_female_tiny    <- tiny_summaries %>% filter(gender == "Female") %>% pull(mean_height)
+sd_female_tiny    <- tiny_summaries %>% filter(gender == "Female") %>% pull(sd_height  )
+
+
 
 ```
 
@@ -359,7 +406,22 @@ bf_schedule <-
     mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
     ) 
 
+tiny_bf_schedule <- 
+  tibble(
+    height_vals = seq(50, 90, by = 1)
+  )  %>% 
+    mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
+    ) 
+
+
+
 bf_schedule %>% 
+  ggplot(aes(x = height_vals, y = bf)) + 
+  geom_line() + 
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
+
+tiny_bf_schedule %>% 
   ggplot(aes(x = height_vals, y = bf)) + 
   geom_line() + 
   scale_y_log10() +
@@ -375,9 +437,12 @@ my_height <- 1.7145 * 39.3701 # to get to height in inches
 
 calc_bayes_factor(value = my_height, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
 
+calc_bayes_factor(value = my_height, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
+
+
 ```
 
-So, from height alone, it's twice as likely I'm male than female. 
+So, from height alone, it's twice as likely I'm male than female, if using the full dataset, and about 60% more likely I'm make if using the small sample.
 
 #Conclusion/Discussion
 
