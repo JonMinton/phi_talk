@@ -215,22 +215,27 @@ mtcars %>%
 * $H_0$: No!
 * $H_A$: Yes!
 
+## Data Source - Kaggle
+
+* From [this page](https://www.kaggle.com/majidarif17/weight-and-heightcsv).
+* Provenance unknown...
+* Unit appears to be inches 
+
 ## Load and standardise data
 
 ```{r}
-pacman::p_load(readxl)
+# pacman::p_load(readxl)
+# height_data <- read_excel("data/height_data.xlsx")
+height_data <- read_csv("data/kaggle_weight-height.csv")
 
-height_data <- read_excel("data/height_data.xlsx")
 
 tidy_height <- 
   height_data %>% 
-  mutate(height = ifelse(
-    is.na(metres), 
-    0.3048 * (feet + 0.0833333 * inches),
-    metres)
-  ) %>% 
-  select(gender, height)
+    select(gender = Gender, height = Height) 
 
+tidy_height %>% 
+  ggplot(aes(x = height, group = gender, fill = gender)) + 
+  geom_density(alpha = 0.4)
 ```
 
 ## Hypothesis test
@@ -240,19 +245,21 @@ obs_mean_diff <-
   tidy_height %>% 
     group_by(gender) %>% 
     summarise(mean_height = mean(height)) %>% 
-    summarise(mean_diff = mean_height[gender == "M"] - mean_height[gender == "F"]) %>% 
+    summarise(mean_diff = mean_height[gender == "Male"] - mean_height[gender == "Female"]) %>% 
     pull(mean_diff)
+
+obs_mean_diff
 
 tidy_height %>% 
   specify(height ~ gender) %>%
   hypothesize(null = "independence") %>% 
   generate(reps = 1000, type = "permute") %>%
-  calculate(stat = "diff in means", order = c("M", "F")) %>% 
-  visualize() %>% 
-  shade_p_value(
-    obs_stat = obs_mean_diff,
-    direction = "greater"
-  )
+  calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
+  visualize() # %>%
+  # shade_p_value(
+  #   obs_stat = obs_mean_diff,
+  #   direction = "greater"
+  # )
 
 ```
 
@@ -335,10 +342,10 @@ summaries <-
         sd_height = sd(height)
       ) 
 
-mu_male      <- summaries %>% filter(gender == "M") %>% pull(mean_height)
-sd_male      <- summaries %>% filter(gender == "M") %>% pull(sd_height  )
-mu_female    <- summaries %>% filter(gender == "F") %>% pull(mean_height)
-sd_female    <- summaries %>% filter(gender == "F") %>% pull(sd_height  )
+mu_male      <- summaries %>% filter(gender == "Male") %>% pull(mean_height)
+sd_male      <- summaries %>% filter(gender == "Male") %>% pull(sd_height  )
+mu_female    <- summaries %>% filter(gender == "Female") %>% pull(mean_height)
+sd_female    <- summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
 
 ```
@@ -347,7 +354,7 @@ sd_female    <- summaries %>% filter(gender == "F") %>% pull(sd_height  )
 ```{r}
 bf_schedule <- 
   tibble(
-    height_vals = seq(0, 2.5, by = 0.01)
+    height_vals = seq(50, 90, by = 1)
   )  %>% 
     mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
     ) 
@@ -364,12 +371,13 @@ bf_schedule %>%
 Finally, what's the relative likelihood that I'm male?
 
 ```{r}
-my_height <- 1.7145
+my_height <- 1.7145 * 39.3701 # to get to height in inches
 
 calc_bayes_factor(value = my_height, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
 
 ```
 
+So, from height alone, it's twice as likely I'm male than female. 
 
 #Conclusion/Discussion
 
