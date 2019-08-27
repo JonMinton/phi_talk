@@ -1,12 +1,9 @@
 ---
-title: "The Infer Package and Bayes Factors"
-author: "Jon Minton"
-output:
-  html_document:
-    df_print: paged
-  pdf_document: default
-  word_document: default
+title: "R Notebook"
+output: html_notebook
 ---
+
+
 
 # Introduction 
 
@@ -280,28 +277,15 @@ tiny_tidy_height <-
 small_tidy_height <- 
   tidy_height %>% 
   sample_n(size = 100, replace = FALSE)
-```
-
-```{r}
-
 
 tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
   geom_histogram(position = "dodge")
 
-
-```
-
-
-```{r}
 small_tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
   geom_histogram(position = "dodge")
 
-```
-
-
-```{r}
 
 tiny_tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
@@ -312,7 +296,7 @@ tiny_tidy_height %>%
 
 ## Hypothesis test
 
-```{r}
+```{r, eval = FALSE}
 
 tiny_obs_mean_diff <- 
   tiny_tidy_height %>% 
@@ -343,7 +327,6 @@ obs_mean_diff
 
 ```
 
-Null distribution with only 10 observations
 
 ```{r}
 
@@ -360,7 +343,6 @@ tiny_tidy_height %>%
 
 ```
 
-Null distribution with 100 observations
 
 ```{r}
 small_tidy_height %>% 
@@ -376,7 +358,6 @@ small_tidy_height %>%
 
 ```
 
-Null distribution with all 10 000 observations
 
 ```{r}
 tidy_height %>% 
@@ -458,18 +439,13 @@ bf_schedule %>%
   ggplot(aes(x = mpg_vals, y = bf)) + 
   geom_line() + 
   scale_y_log10() +
-  geom_hline(yintercept = 1) + 
-  labs(x = "Miles per gallon", 
-       y = "Bayes factor (>1: more likely manual)"
-  )
+  geom_hline(yintercept = 1)
 
 
 ```
 
 
 ## Example using our heights data
-
-Get summaries of male and female means and standard deviations
 
 ```{r}
 
@@ -515,8 +491,6 @@ sd_female    <- summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
 ```
 
-Calculate Bayes Factor Schedules
-
 
 ```{r}
 tiny_bf_schedule <- 
@@ -543,22 +517,12 @@ bf_schedule <-
 
 ```
 
-The schedule based on only 10 observations 
-
 ```{r}
-
-brks <- c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
-
-lbs <- c("1:10,000", "1:1000", "1:100", "1:10", "Even", "10:1", "100:1", "1000:1", "10,000:1")
-
 tiny_bf_schedule %>% 
   ggplot(aes(x = height_vals, y = bf)) + 
   geom_line() + 
-  scale_y_log10(breaks = brks, labels = lbs) +
-  geom_hline(yintercept = 1) +
-  labs(x = "Height in inches",
-       y = "Bayes factor (> Even means more likely male)",
-       title = "Bayes Factor of gender given height (10 observations)")
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
 
 ```
 
@@ -567,11 +531,8 @@ tiny_bf_schedule %>%
 small_bf_schedule %>% 
   ggplot(aes(x = height_vals, y = bf)) + 
   geom_line() + 
-  scale_y_log10(breaks = brks, labels = lbs) +
-  geom_hline(yintercept = 1) +
-  labs(x = "Height in inches",
-       y = "Bayes factor (> Even means more likely male)",
-       title = "Bayes Factor of gender given height (100 observations)")
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
 ```
 
 
@@ -579,11 +540,8 @@ small_bf_schedule %>%
 bf_schedule %>% 
   ggplot(aes(x = height_vals, y = bf)) + 
   geom_line() + 
-  scale_y_log10(breaks = brks, labels = lbs) +
-  geom_hline(yintercept = 1) +
-  labs(x = "Height in inches",
-       y = "Bayes factor (> Even means more likely male)",
-       title = "Bayes Factor of gender given height (10,000 observations)")
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
 ```
 
 
@@ -592,19 +550,15 @@ Finally, what's the relative likelihood that I'm male?
 
 ```{r}
 (my_height <- 1.7145 * 39.3701) # to get to height in inches
-```
 
-```{r}
 calc_bayes_factor(value = my_height, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
 
-```
-
-```{r}
 calc_bayes_factor(value = my_height, mu_null = mu_female_small, sd_null = sd_female_small, mu_alt = mu_male_small, sd_alt = sd_male_small)
-```
 
-```{r}
 calc_bayes_factor(value = my_height, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
+
+
+
 
 ```
 
