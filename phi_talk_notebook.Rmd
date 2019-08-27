@@ -4,6 +4,8 @@ author: "Jon Minton"
 output:
   html_document:
     df_print: paged
+  pdf_document: default
+  word_document: default
 ---
 
 # Introduction 
@@ -137,6 +139,7 @@ null_rq1 %>%
 ```
 
 To answer the RQ in Neyman-Pearson terms, with alpha of 0.05, two-tailed:
+
 > Is the above value either greater than 0.975, or less than 0.025? 
 
 ## Second research question
@@ -221,7 +224,11 @@ mtcars %>%
 * Provenance unknown...
 * Unit appears to be inches 
 
-The dataset has many observations (though they may be synthetic), and so I'm going to create a variant with far fewer observations too
+We're going to produce three variants of the dataset:
+
+* **Full dataset**: 10,000 observations
+* **Small dataset**: 100 observations (1% sample)
+* **Tiny dataset**: 10 observations (0.1% sample)
 
 ## Load and standardise data
 
@@ -238,15 +245,24 @@ tidy_height <-
 set.seed(20) 
 tiny_tidy_height <- 
   tidy_height %>% 
-  sample_n(size = 40, replace = FALSE)
+  sample_n(size = 10, replace = FALSE)
+
+small_tidy_height <- 
+  tidy_height %>% 
+  sample_n(size = 100, replace = FALSE)
 
 tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
-  geom_density(alpha = 0.4)
+  geom_histogram(position = "dodge")
+
+small_tidy_height %>% 
+  ggplot(aes(x = height, group = gender, fill = gender)) + 
+  geom_histogram(position = "dodge")
+
 
 tiny_tidy_height %>% 
   ggplot(aes(x = height, group = gender, fill = gender)) + 
-  geom_density(alpha = 0.4)
+  geom_histogram(position = "dodge")
 
 
 ```
@@ -254,14 +270,6 @@ tiny_tidy_height %>%
 ## Hypothesis test
 
 ```{r, eval = FALSE}
-obs_mean_diff <- 
-  tidy_height %>% 
-    group_by(gender) %>% 
-    summarise(mean_height = mean(height)) %>% 
-    summarise(mean_diff = mean_height[gender == "Male"] - mean_height[gender == "Female"]) %>% 
-    pull(mean_diff)
-
-obs_mean_diff
 
 tiny_obs_mean_diff <- 
   tiny_tidy_height %>% 
@@ -272,24 +280,59 @@ tiny_obs_mean_diff <-
 
 tiny_obs_mean_diff
 
+small_obs_mean_diff <- 
+  small_tidy_height %>% 
+    group_by(gender) %>% 
+    summarise(mean_height = mean(height)) %>% 
+    summarise(mean_diff = mean_height[gender == "Male"] - mean_height[gender == "Female"]) %>% 
+    pull(mean_diff)
 
-tidy_height %>% 
-  specify(height ~ gender) %>%
-  hypothesize(null = "independence") %>% 
-  generate(reps = 1000, type = "permute") %>%
-  calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
-  visualize() # %>%
-  # shade_p_value(
-  #   obs_stat = obs_mean_diff,
-  #   direction = "greater"
-  # )
+small_obs_mean_diff
+
+obs_mean_diff <- 
+  tidy_height %>% 
+    group_by(gender) %>% 
+    summarise(mean_height = mean(height)) %>% 
+    summarise(mean_diff = mean_height[gender == "Male"] - mean_height[gender == "Female"]) %>% 
+    pull(mean_diff)
+
+obs_mean_diff
+
+
 
 tiny_tidy_height %>% 
   specify(height ~ gender) %>%
   hypothesize(null = "independence") %>% 
   generate(reps = 1000, type = "permute") %>%
   calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
-  visualize() 
+  visualize() +
+  shade_p_value(
+    obs_stat = tiny_obs_mean_diff,
+    direction = "greater"
+  )
+
+small_tidy_height %>% 
+  specify(height ~ gender) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
+  visualize() +
+  shade_p_value(
+    obs_stat = small_obs_mean_diff,
+    direction = "greater"
+  )
+
+tidy_height %>% 
+  specify(height ~ gender) %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("Male", "Female")) %>% 
+  visualize(bins = 100) +
+  shade_p_value(
+    obs_stat = obs_mean_diff,
+    direction = "greater"
+  )
+
 ```
 
 
@@ -367,18 +410,7 @@ bf_schedule %>%
 ## Example using our heights data
 
 ```{r}
-summaries <- 
-  tidy_height %>% 
-      group_by(gender) %>% 
-      summarise(
-        mean_height = mean(height),
-        sd_height = sd(height)
-      ) 
 
-mu_male      <- summaries %>% filter(gender == "Male") %>% pull(mean_height)
-sd_male      <- summaries %>% filter(gender == "Male") %>% pull(sd_height  )
-mu_female    <- summaries %>% filter(gender == "Female") %>% pull(mean_height)
-sd_female    <- summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
 tiny_summaries <- 
   tiny_tidy_height %>% 
@@ -393,19 +425,36 @@ sd_male_tiny      <- tiny_summaries %>% filter(gender == "Male") %>% pull(sd_hei
 mu_female_tiny    <- tiny_summaries %>% filter(gender == "Female") %>% pull(mean_height)
 sd_female_tiny    <- tiny_summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
+small_summaries <- 
+  small_tidy_height %>% 
+      group_by(gender) %>% 
+      summarise(
+        mean_height = mean(height),
+        sd_height = sd(height)
+      ) 
 
+mu_male_small      <- small_summaries %>% filter(gender == "Male") %>% pull(mean_height   )
+sd_male_small      <- small_summaries %>% filter(gender == "Male") %>% pull(sd_height     )
+mu_female_small    <- small_summaries %>% filter(gender == "Female") %>% pull(mean_height )
+sd_female_small    <- small_summaries %>% filter(gender == "Female") %>% pull(sd_height   )
+
+summaries <- 
+  tidy_height %>% 
+      group_by(gender) %>% 
+      summarise(
+        mean_height = mean(height),
+        sd_height = sd(height)
+      ) 
+
+mu_male      <- summaries %>% filter(gender == "Male") %>% pull(mean_height)
+sd_male      <- summaries %>% filter(gender == "Male") %>% pull(sd_height  )
+mu_female    <- summaries %>% filter(gender == "Female") %>% pull(mean_height)
+sd_female    <- summaries %>% filter(gender == "Female") %>% pull(sd_height  )
 
 ```
 
 
 ```{r}
-bf_schedule <- 
-  tibble(
-    height_vals = seq(50, 90, by = 1)
-  )  %>% 
-    mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
-    ) 
-
 tiny_bf_schedule <- 
   tibble(
     height_vals = seq(50, 90, by = 1)
@@ -413,6 +462,33 @@ tiny_bf_schedule <-
     mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
     ) 
 
+small_bf_schedule <- 
+  tibble(
+    height_vals = seq(50, 90, by = 1)
+  )  %>% 
+    mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female_small, sd_null = sd_female_small, mu_alt = mu_male_small, sd_alt = sd_male_small)
+    ) 
+
+
+bf_schedule <- 
+  tibble(
+    height_vals = seq(50, 90, by = 1)
+  )  %>% 
+    mutate(bf = map_dbl(height_vals, calc_bayes_factor, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
+    ) 
+
+
+tiny_bf_schedule %>% 
+  ggplot(aes(x = height_vals, y = bf)) + 
+  geom_line() + 
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
+
+small_bf_schedule %>% 
+  ggplot(aes(x = height_vals, y = bf)) + 
+  geom_line() + 
+  scale_y_log10() +
+  geom_hline(yintercept = 1)
 
 
 bf_schedule %>% 
@@ -421,11 +497,6 @@ bf_schedule %>%
   scale_y_log10() +
   geom_hline(yintercept = 1)
 
-tiny_bf_schedule %>% 
-  ggplot(aes(x = height_vals, y = bf)) + 
-  geom_line() + 
-  scale_y_log10() +
-  geom_hline(yintercept = 1)
 
 
 ```
@@ -433,16 +504,21 @@ tiny_bf_schedule %>%
 Finally, what's the relative likelihood that I'm male?
 
 ```{r}
-my_height <- 1.7145 * 39.3701 # to get to height in inches
+(my_height <- 1.7145 * 39.3701) # to get to height in inches
+
+calc_bayes_factor(value = my_height, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
+
+calc_bayes_factor(value = my_height, mu_null = mu_female_small, sd_null = sd_female_small, mu_alt = mu_male_small, sd_alt = sd_male_small)
 
 calc_bayes_factor(value = my_height, mu_null = mu_female, sd_null = sd_female, mu_alt = mu_male, sd_alt = sd_male)
 
-calc_bayes_factor(value = my_height, mu_null = mu_female_tiny, sd_null = sd_female_tiny, mu_alt = mu_male_tiny, sd_alt = sd_male_tiny)
+
 
 
 ```
 
-So, from height alone, it's twice as likely I'm male than female, if using the full dataset, and about 60% more likely I'm make if using the small sample.
+So, from height alone, it's about 28% more likely I'm *female* if using the tiny dataset, about two and a half times more likely I'm male if using the small dataset, and about twice as likely I'm male if using the full dataset.
+
 
 #Conclusion/Discussion
 
@@ -451,3 +527,4 @@ So, from height alone, it's twice as likely I'm male than female, if using the f
 * Computationally intensive and analytic approaches do the same thing in different ways
 * Classical (Neyman-Pearson style) hypothesis tests may not answer the question you want to ask
 * Bayes Factors are an alterantive and often more pragmatic way of weighing the evidence
+
