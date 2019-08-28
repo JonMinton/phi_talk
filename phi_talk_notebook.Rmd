@@ -13,7 +13,7 @@ output:
 This document will introduce a couple of concepts, and one R package, for performing statistical inference tests in R.
 
 1. The There-is-only-one-test framework, and the R package infer
-2. Bayes Factors, as distinct from Neyman-Pearson Hypothesis Testing frameoworks
+2. Bayes Factors, as distinct from Neyman-Pearson Hypothesis Testing frameworks
 
 # Proposed structure
 
